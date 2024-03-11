@@ -19,7 +19,7 @@ class Post(BaseModel):
     published:bool=True
 while True:                                                                                                  #cursor_factory: gonna make a dic mappin rows with the content
     try:
-        conn=psycopg2.connect(host="localhost",database="fastapi",user="postgres",password="alone",cursor_factory=RealDictCursor) #this lib is little bit weird when u make a query to retreive bunch of rows from database , it just gives values without column
+        conn=psycopg2.connect(host="localhost",database="fastapi",user="postgres",password="****",cursor_factory=RealDictCursor) #this lib is little bit weird when u make a query to retreive bunch of rows from database , it just gives values without column
         cursor=conn.cursor()
         print("Database Connection is successfull")
         break
