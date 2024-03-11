@@ -1,3 +1,5 @@
+#also kept psycopg2 path operations so to compare it with sqlalchemy 
+
 from fastapi import FastAPI,Response,status,HTTPException,Depends
 from fastapi.params import Body
 from pydantic import BaseModel
@@ -24,7 +26,7 @@ class Post(BaseModel):
     published:bool=True
 
 # try:
-#     conn=psycopg2.connect(host="localhost",database="fastapi",user="postgres",password="alone",cursor_factory=RealDictCursor)
+#     conn=psycopg2.connect(host="localhost",database="fastapi",user="****",password="alone",cursor_factory=RealDictCursor)
 #     cursor=conn.cursor()
 #     print("Database Connection is successfull")
 
