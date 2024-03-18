@@ -1,8 +1,11 @@
+#sqlalchemy doesnt know how to talk to the database, it has all the code to write query in python and define all the models , hence database drievr psycopg is installed
+
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-SQL_DATABASE_URL='postgresql://postgres:****@localhost:5432/fastapi' 
+                #postgresql://,username:,password.@localhost:5432/,database.
+SQL_DATABASE_URL='postgresql://postgres:****@localhost:5432/fastapi'
 
 engine=create_engine(SQL_DATABASE_URL) #resposible to connect alchemy to databae
 
@@ -11,9 +14,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 # Dependency  
-#sessional obj is responsible to talking to db
-#we create a function where we actulallt ge t connected to our database or get a session to to database
-#we just keep calling this function everytime we get rewuest to our api
+#sessionlocal obj is responsible to talking to db
+#we create a function where we actually get connected to our database or get a session to to database
+#we just keep calling this function everytime we send request to our api
 def get_db():
     db = SessionLocal()
     try:

@@ -1,32 +1,26 @@
-#also kept psycopg2 path operations so to compare it with sqlalchemy 
+#I have not deleted the psycopg2 path operation so that u can compare the path operation
 
 from fastapi import FastAPI,Response,status,HTTPException,Depends
 from fastapi.params import Body
-from pydantic import BaseModel
-from typing import Optional
+from typing import Optional,List
 from random import randrange
 import psycopg2 
 from psycopg2.extras import RealDictCursor
 from app2 import models  # Importing models.py directly
+from app2 import schemas # Importing schemas.py directly
+from app2 import utils # Importing utils.py directly
 from app2.database import  engine,get_db
 from sqlalchemy.orm import Session
+
 models.Base.metadata.create_all(bind=engine)
-
-
 
 
 # whe we run api , db:Session=Depends(get_db) going to give access to db,it will create a session to our database and perform operation then close it
 app=FastAPI()
 
-# we use get_db in sqlalchemy instead of below code
-# our frontend is sending the exact data that we expect
-class Post(BaseModel): 
-    title:str
-    content : str
-    published:bool=True
 
 # try:
-#     conn=psycopg2.connect(host="localhost",database="fastapi",user="****",password="alone",cursor_factory=RealDictCursor)
+#     conn=psycopg2.connect(host="localhost",database="fastapi",user="postgres",password="****",cursor_factory=RealDictCursor)
 #     cursor=conn.cursor()
 #     print("Database Connection is successfull")
 
@@ -36,11 +30,12 @@ class Post(BaseModel):
 
 #READ
 
-@app.get("/posts")
+@app.get("/posts",response_model=List[schemas.Post])
 def get_posts(db:Session=Depends(get_db) ):
     posts= db.query(models.Post).all()   #models.Post allow us access the model to make query to our posts tabel
     # print(posts) #after removing .all(), u will see the sql query here
-    return {"data":posts} 
+    # return {"data":posts} 
+    return posts  #automatic convert it to json 
 
 # @app.get("/posts")
 # def get_posts():
@@ -53,17 +48,18 @@ def get_posts(db:Session=Depends(get_db) ):
 
 
 #Create
-@app.post("/posts")
-def create_post(post:Post,db:Session=Depends(get_db)):  
+@app.post("/posts",status_code=status.HTTP_201_CREATED,response_model=schemas.Post)
+def create_post(post:schemas.PostBase,db:Session=Depends(get_db)):  
     
-    new_post = models.Post(title=post.title, content=post.content, published=post.published)
+    # new_post = models.Post(title=post.title, content=post.content, published=post.published)
     #what if we have more feild , itis not reliable to write all columns andit values hence
     new_post = models.Post(**post.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
 
-    return {"data":new_post} 
+    # return {"data":new_post} 
+    return new_post
 
 # @app.post("/posts")
 # def create_post(post:Post):  
@@ -77,12 +73,13 @@ def create_post(post:Post,db:Session=Depends(get_db)):
     
 #READ
 
-@app.get("/sqlalchemy_posts/{id}")  
+@app.get("/posts/{id}")  
 def get_post(id:int,db:Session=Depends(get_db)):  
     post= db.query(models.Post).filter(models.Post.id==id).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"post with id: {id} does not found")
-    return {"post_detail":post}  
+    # return {"post_detail":post}  
+    return post
 
 # @app.get("/posts/{id}")  
 # def get_post(id:int):  
@@ -97,10 +94,10 @@ def get_post(id:int,db:Session=Depends(get_db)):
 
 #DELETE
 
-@app.delete('/sqlalchemy_posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
+@app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int,db:Session=Depends(get_db)):
-    post=db.query(models.Post).filter(models.Post.id==id)
-
+    post=db.query(models.Post).filter(models.Post.id==id)  #will delete all post that contain id
+    # post is a SQLAlchemy query object. Even if no rows match the query condition, post_query itself won't be None. It will always be a valid query object.
     if post.first()==None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"{id} does not exist")
@@ -122,7 +119,7 @@ def delete_post(id: int,db:Session=Depends(get_db)):
 
 #UPDATE
 @app.put('/sqlalchemy_posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(updated_post:Post,id: int,db:Session=Depends(get_db)):
+def delete_post(updated_post:schemas.PostBase,id: int,db:Session=Depends(get_db)):
     post=db.query(models.Post).filter(models.Post.id==id)
     post_first=post.first()
     if post_first==None:
@@ -130,6 +127,7 @@ def delete_post(updated_post:Post,id: int,db:Session=Depends(get_db)):
                             detail=f"{id} does not exist")
     post.update(updated_post.model_dump(),synchronize_session=False)
     db.commit()
+    return post.first()
 
 # @app.put('/posts/{id}')
 # def update_post(id:int,post:Post):
@@ -140,3 +138,28 @@ def delete_post(updated_post:Post,id: int,db:Session=Depends(get_db)):
 #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
 #                             detail=f"{id} does not exist")
 #     return {"data":update_it}
+
+
+
+
+#CREATE USER 
+
+@app.post("/users",status_code=status.HTTP_201_CREATED,response_model=schemas.UserOut)
+def create_user(user:schemas.UserCreate, db :Session=Depends(get_db)):
+    #hash the password
+    hashed_password=utils.hash_pass(user.password)
+    user.password=hashed_password
+    new_user =models.User(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+#get the user data
+
+@app.get('/users/{id}', response_model=schemas.UserOut)
+def get_user(id: int, db:Session= Depends(get_db)):
+    post= db.query(models.User).filter(models.User.id==id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No user with id :{id}")
+    return post
